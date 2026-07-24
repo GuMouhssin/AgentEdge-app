@@ -1,55 +1,91 @@
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from .website import fetch_homepage
 from bs4 import MarkupResemblesLocatorWarning
 import warnings
-warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
-# Ordered from MOST likely to LEAST likely
-CONTACT_KEYWORDS = [
+warnings.filterwarnings(
+    "ignore",
+    category=MarkupResemblesLocatorWarning
+)
+
+PRIORITY_KEYWORDS = [
     "contact",
     "contact-us",
-    "contactus",
     "get-in-touch",
-    "reach-us",
-    "locations",
+    "team",
+    "our-team",
+    "meet-the-team",
     "about",
+    "about-us",
+    "staff",
 ]
 
 
-def find_contact_page(base_url, html):
+def find_priority_pages(base_url, html):
     """
-    Find the most likely contact page.
+    Return a list of high-priority pages.
 
-    Args:
-        base_url (str): Website URL.
-        html (str): Homepage HTML.
-
-    Returns:
-        str | None
+    - Homepage is always first.
+    - Only real web pages are returned.
+    - Duplicates are removed.
     """
+
+    pages = [base_url]
+
     if not html:
-        return None
-    soup = BeautifulSoup(html, "html.parser")
-    # Collect every link once
-    links = []
-    for a in soup.find_all("a", href=True):
-        href = a["href"]
-        text = a.get_text(strip=True)
-        links.append({
-            "href": href,
-            "href_lower": href.lower(),
-            "text_lower": text.lower()
-        })
-    # Search by keyword priority
-    for keyword in CONTACT_KEYWORDS:
-        for link in links:
-            if (
-                keyword in link["href_lower"]
-                or keyword in link["text_lower"]
-            ):
-                return urljoin(base_url, link["href"])
-    return None
+        return pages
 
-# html = fetch_homepage("https://eddyherring.com/")
-# print(find_contact_page("https://eddyherring.com/", html))
+    soup = BeautifulSoup(html, "html.parser")
+
+    seen = {base_url.rstrip("/")}
+
+    for keyword in PRIORITY_KEYWORDS:
+
+        for a in soup.find_all("a", href=True):
+
+            href = a["href"].strip()
+            text = a.get_text(strip=True)
+
+            href_lower = href.lower()
+            text_lower = text.lower()
+
+            if (
+                keyword not in href_lower
+                and keyword not in text_lower
+            ):
+                continue
+
+            # Skip non-web links
+            if href_lower.startswith((
+                "mailto:",
+                "tel:",
+                "javascript:",
+                "#",
+            )):
+                continue
+
+            # Skip downloads
+            if href_lower.endswith((
+                ".pdf",
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".gif",
+                ".svg",
+                ".webp",
+            )):
+                continue
+
+            url = urljoin(base_url, href)
+
+            # Only HTTP(S) pages
+            if not url.startswith(("http://", "https://")):
+                continue
+
+            normalized = url.rstrip("/")
+
+            if normalized not in seen:
+                pages.append(url)
+                seen.add(normalized)
+
+    return pages[:3]

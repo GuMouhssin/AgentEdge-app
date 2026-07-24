@@ -21,6 +21,7 @@ def init_db():
                 phone TEXT,
                 maps_url TEXT UNIQUE NOT NULL,
                 rate REAL,
+                reviews INTEGER,
                 contact_page TEXT,
                 emails TEXT,
                 facebook TEXT,

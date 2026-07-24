@@ -1,4 +1,3 @@
-import sqlite3
 from db.db import connect_db
 from .models import Business
 import json
@@ -10,6 +9,7 @@ def row_to_business(row):
         phone=row["phone"],
         maps_url=row["maps_url"],
         rate=row["rate"],
+        reviews=row["reviews"],
         contact_page=row["contact_page"],
         emails=json.loads(row["emails"]) if row["emails"] else [],
         facebook=row["facebook"],
@@ -30,6 +30,7 @@ def insert_business(business):
                 phone,
                 maps_url,
                 rate,
+                reviews,
                 contact_page,
                 emails,
                 facebook,
@@ -39,13 +40,14 @@ def insert_business(business):
                 status,
                 lead_score
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             business.name,
             business.website,
             business.phone,
             business.maps_url,
             business.rate,
+            business.reviews,
             business.contact_page,
             json.dumps(business.emails),
             business.facebook,
@@ -107,12 +109,12 @@ def get_raw_businesses():
     finally:
         conn.close()
 
-def delete_business(url):
+def delete_business(bussiness):
     conn, cursor = connect_db()
     try:
         cursor.execute('''
             DELETE FROM businesses WHERE maps_url = ?
-        ''', (url,))
+        ''', (bussiness.maps_url,))
         conn.commit()
     finally:
         conn.close()

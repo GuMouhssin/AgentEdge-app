@@ -1,6 +1,6 @@
 from db.models import Business
 
-def extract_business_data(page, maps_url):
+def extract_business_data(page, maps_url, review):
     name = page.locator('h1.DUwDvf.lfPIob').first.inner_text()
 
     website_locator = page.locator('a.CsEnBe[jslog*="3443"]')
@@ -32,6 +32,7 @@ def extract_business_data(page, maps_url):
         website = website,
         phone = phone,
         maps_url = maps_url,
-        rate = float(rate.replace(",", "."))  if rate else None
+        rate = float(rate.replace(",", "."))  if rate else None,
+        reviews = int(review.replace("(", "").replace(")", '')) if rate else 0
     )
 

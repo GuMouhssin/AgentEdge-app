@@ -63,7 +63,9 @@ def report_menu():
         print(Fore.RED + "Database is empty.")
         return
     filename = input("Enter the name of the file: ")
-    export_to_excel(businesses, filename = filename + ".xlsx")
+    city = input("Enter the name of the city: ")
+    limit = input("number of exported businesses: ")
+    export_to_excel(businesses, filename = filename + ".xlsx", limit = int(limit), city = city)
 
     print(Fore.GREEN + "✓ report.xlsx generated.")
 
@@ -90,7 +92,9 @@ def full_pipeline():
         print(Fore.RED + "Database is empty.")
         return
     filename = input("Enter the name of the file: ")
-    export_to_excel(businesses, filename = filename + ".xlsx")
+    city = input("Enter the name of the city: ")
+    limit = input("number of exported businesses: ")
+    export_to_excel(businesses, filename = filename + ".xlsx", limit = int(limit), city = city)
 
     print(Fore.GREEN)
     print("=" * 50)

@@ -1,113 +1,130 @@
 from db.models import Business
 from db.ops import update_business
-from enrichment.contact import find_contact_page
+from enrichment.contact import find_priority_pages
 from enrichment.email import extract_emails
 from enrichment.socials import extract_social_links
 from enrichment.website import fetch_homepage
 
-def score_lead(agency):
-    score = 0
-    
-    # Google Maps signals (strongest)
-    if agency["rating"] >= 4.5:
-        score += 25
-    elif agency["rating"] >= 4.0:
-        score += 15
-        
-    if agency["reviews"] >= 100:
-        score += 20
-    elif agency["reviews"] >= 50:
-        score += 10
-    elif agency["reviews"] >= 20:
-        score += 5
-    
-    # Website presence
-    if agency["has_website"]:
-        score += 15
-    
-    # Contact info completeness
-    if agency["email"]:
-        score += 15
-    if agency["phone"]:
-        score += 10
-    
-    # Social presence
-    if agency["has_linkedin"]:
-        score += 10
-    if agency["has_facebook"]:
-        score += 5
-    
-    # Business activity
-    if agency["hours_available"]:
-        score += 10
-    
-    return score
-
-# Score interpretation:
-# 80-100: Hot lead — contact immediately
-# 60-79:  Warm lead — worth contacting
-# 40-59:  Cold lead — lower priority
-# 0-39:   Skip
 
 def enrich_business(business: Business):
+
     if not business.website:
         business.status = "enriched"
         business.lead_score = 0
         return business
-    html = fetch_homepage(business.website)
-    if not html:
+
+    homepage_html = fetch_homepage(business.website)
+
+    if not homepage_html:
         business.status = "raw"
         business.lead_score = 0
         return business
-    contact_page = find_contact_page(business.website, html)
-    lead_score = 0 
+
+    pages = find_priority_pages(
+        business.website,
+        homepage_html
+    )
+
+    emails = set()
+
+    socials = {
+        "facebook": None,
+        "instagram": None,
+        "linkedin": None,
+        "youtube": None,
+    }
+
+    contact_page = None
+
+    for i, page in enumerate(pages):
+
+        html = homepage_html if i == 0 else fetch_homepage(page)
+
+        if not html:
+            continue
+
+        emails.update(extract_emails(html))
+
+        page_socials = extract_social_links(html)
+
+        for key in socials:
+
+            if socials[key] is None and page_socials[key]:
+                socials[key] = page_socials[key]
+
+        if i > 0 and contact_page is None:
+            contact_page = page
+
+    emails = sorted(emails)
+
+    lead_score = 0
+
+    # Reviews
+    if business.reviews >= 500:
+        lead_score += 20
+    elif business.reviews >= 100:
+        lead_score += 15
+    elif business.reviews >= 50:
+        lead_score += 10
+    elif business.reviews >= 20:
+        lead_score += 5
+
+    # Rating
     if business.rate:
-        if business.rate == 4.5:
-            lead_score += 25
+        if business.rate >= 4.5:
+            lead_score += 20
         elif business.rate >= 4.0:
             lead_score += 15
-    if contact_page:
-        html = fetch_homepage(contact_page)
-        emails = extract_emails(html)
-        socials = extract_social_links(html)
-    else:
-        emails = extract_emails(business.website)
-        socials = extract_social_links(business.website)
+        elif business.rate >= 3.5:
+            lead_score += 10
+        elif business.rate >= 3.0:
+            lead_score += 5
 
     if business.website:
-        lead_score += 15
+        lead_score += 5
+
 
     if emails:
         lead_score += 15
 
     if socials["linkedin"]:
         lead_score += 15
+
     if socials["facebook"]:
         lead_score += 10
+
     if socials["instagram"]:
-        lead_score += 15
+        lead_score += 10
+
     if socials["youtube"]:
-        lead_score += 15
+        lead_score += 5
+
     return Business(
-        name = business.name,
-        website = business.website,
-        phone = business.phone,
-        maps_url = business.maps_url,
-        rate = business.rate,
-        status = "enriched",
-        emails = emails,
-        contact_page = contact_page,
-        facebook = socials["facebook"],
-        instagram = socials["instagram"],
-        linkedin = socials["linkedin"],
-        youtube = socials["youtube"],
-        lead_score = lead_score
-    ) 
+        name=business.name,
+        website=business.website,
+        phone=business.phone,
+        maps_url=business.maps_url,
+        rate=business.rate,
+        reviews=business.reviews,
+        status="enriched",
+        emails=emails,
+        contact_page=contact_page,
+        facebook=socials["facebook"],
+        instagram=socials["instagram"],
+        linkedin=socials["linkedin"],
+        youtube=socials["youtube"],
+        lead_score=lead_score,
+    )
+
 
 def process_all_businesses(businesses):
-    num = len(businesses)
-    for i, business in enumerate(businesses, start = 1):
-        print(f'enriching [{i}/{num}]: {business.name}')
-        enriched = enrich_business(business)
-        update_business(enriched)
 
+    total = len(businesses)
+
+    for i, business in enumerate(businesses, start=1):
+
+        print(f"Enriching [{i}/{total}] : {business.name}")
+
+        enriched = enrich_business(business)
+
+        update_business(enriched)

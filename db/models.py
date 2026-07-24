@@ -6,6 +6,7 @@ class Business:
         phone,
         maps_url,
         rate,
+        reviews,
         status="raw",
         lead_score=None,
         emails = None,
@@ -20,6 +21,7 @@ class Business:
         self.phone = phone
         self.maps_url = maps_url
         self.rate = rate
+        self.reviews = reviews
         self.status = status
         self.lead_score = lead_score
         self.emails = emails or []

@@ -29,4 +29,4 @@ def load_more_results(page, target_count):
             "(el) => el.scrollBy(0, el.scrollHeight)"
         )
 
-        page.wait_for_timeout(2000)
+        page.wait_for_load_state("networkidle")
