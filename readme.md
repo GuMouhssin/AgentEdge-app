@@ -21,7 +21,7 @@ Automated competitor intelligence for real estate agencies.
 
 ## Demo
 
-(put your YouTube link here)
+https://youtu.be/KgLVkSNbhMw
 
 ## Installation
 
